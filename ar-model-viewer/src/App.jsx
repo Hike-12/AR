@@ -4,18 +4,33 @@ import { motion, AnimatePresence } from "framer-motion";
 const models = [
   {
     id: 1,
-    name: "Fox",
-    url: "https://cdn.spline.design/fox.glb", // replace with real URLs from Spline or free sources
+    name: "Bear",
+    folder: "/bear", // folder inside public with model.gltf + textures
+    file: "scene.gltf",
   },
   {
     id: 2,
-    name: "Rabbit",
-    url: "https://cdn.spline.design/rabbit.glb",
+    name: "Elk",
+    folder: "/elk",
+    file: "scene.gltf",
   },
   {
     id: 3,
-    name: "Bear",
-    url: "https://cdn.spline.design/bear.glb",
+    name: "Owl",
+    folder: "/owl",
+    file: "scene.gltf",
+  },
+  {
+    id: 4,
+    name: "Panther",
+    folder: "/panther",
+    file: "scene.gltf",
+  },
+  {
+    id: 5,
+    name: "Horse",
+    folder: "/horse",
+    file: "scene.gltf",
   },
 ];
 
@@ -23,7 +38,6 @@ function App() {
   const [selectedModel, setSelectedModel] = useState(null);
   const modelViewerRef = useRef(null);
 
-  // Check if mobile device for AR support
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -31,11 +45,8 @@ function App() {
     setIsMobile(/Android|iPhone|iPad|iPod/i.test(ua));
   }, []);
 
-  // Screenshot for desktop users
   function takeScreenshot() {
     if (!modelViewerRef.current) return;
-    // Note: model-viewer doesn't provide screenshot API out of the box
-    // You can capture the canvas or iframe in advanced way or just tell user to use OS screenshot shortcut
     alert(
       "To capture the model, please use your OS screenshot feature (e.g., PrintScreen or Cmd+Shift+4)."
     );
@@ -59,12 +70,13 @@ function App() {
               onClick={() => setSelectedModel(model)}
             >
               <p className="text-xl font-semibold mb-2">{model.name}</p>
-              {/* You can add thumbnail here */}
+              {/* You can add thumbnails if you have */}
               <img
-                src={`https://modelviewer.dev/shared-assets/models/${model.name.toLowerCase()}.png`}
+                src={`${model.folder}/thumbnail.png`} // optional thumbnail if you have it
                 alt={model.name}
                 className="rounded"
                 loading="lazy"
+                onError={(e) => (e.currentTarget.style.display = "none")} // hide if no thumbnail
               />
             </motion.div>
           ))}
@@ -89,7 +101,7 @@ function App() {
 
             <model-viewer
               ref={modelViewerRef}
-              src={selectedModel.url}
+              src={`${selectedModel.folder}/${selectedModel.file}`}
               alt={selectedModel.name}
               ar
               ar-modes="webxr scene-viewer quick-look"

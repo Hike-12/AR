@@ -1,0 +1,11 @@
+Model Information:
+* title:	Elk – Wild Mesh (No Rig / No Animations)
+* source:	https://sketchfab.com/3d-models/elk-wild-mesh-no-rig-no-animations-24b28b3b9e7d4ea0b8ddc0c0cf891ed6
+* author:	WildMesh 3D Free (https://sketchfab.com/WildMesh_3D)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Elk – Wild Mesh (No Rig / No Animations)" (https://sketchfab.com/3d-models/elk-wild-mesh-no-rig-no-animations-24b28b3b9e7d4ea0b8ddc0c0cf891ed6) by WildMesh 3D Free (https://sketchfab.com/WildMesh_3D) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

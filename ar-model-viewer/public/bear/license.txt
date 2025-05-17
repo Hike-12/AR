@@ -1,0 +1,11 @@
+Model Information:
+* title:	Bear – Wild Mesh (No Rig / No Animations)
+* source:	https://sketchfab.com/3d-models/bear-wild-mesh-no-rig-no-animations-44a214e89efc4ec6bb3074225d84a316
+* author:	WildMesh 3D Free (https://sketchfab.com/WildMesh_3D)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Bear – Wild Mesh (No Rig / No Animations)" (https://sketchfab.com/3d-models/bear-wild-mesh-no-rig-no-animations-44a214e89efc4ec6bb3074225d84a316) by WildMesh 3D Free (https://sketchfab.com/WildMesh_3D) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

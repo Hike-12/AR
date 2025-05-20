@@ -133,10 +133,6 @@ export default function AUGMINT() {
       // Limit panning to keep model centered
       controls.screenSpacePanning = true;
       controls.panSpeed = 0.7;
-      
-      // Restrict rotation to prevent disorientation
-      controls.minAzimuthAngle = -Math.PI / 2;
-      controls.maxAzimuthAngle = Math.PI / 2;
 
       controls.touches = {
         ONE: THREE.TOUCH.ROTATE,
@@ -174,13 +170,7 @@ export default function AUGMINT() {
       // Animation loop
       const animate = () => {
         requestAnimationFrame(animate);
-        controls.update();
-        
-        // Add slight rotation to model when not actively controlled
-        if (!modelControlsActive && modelGroup) {
-          modelGroup.rotation.y += 0.002;
-        }
-        
+        controls.update();      
         rendererLocal.render(scene, camera);
       };
 
@@ -441,6 +431,10 @@ export default function AUGMINT() {
           </div>
           <div className="space-y-4">
             <div>
+              <h4 className="font-bold mb-1 text-blue-400">Models:</h4>
+              <ul>
+                <li className="ml-4 space-y-1 text-blue-100">• Click on the top left sidebar for more models</li>
+              </ul>
               <h4 className="font-bold mb-1 text-blue-400">Model Controls:</h4>
               <ul className="ml-4 space-y-1 text-blue-100">
                 <li>• Click <strong>"Control Model"</strong> to interact with the 3D model</li>

@@ -285,10 +285,11 @@ export default function AUGMINT() {
  return (
   <div className="flex h-screen w-full bg-neutral-950 text-gray-100 overflow-hidden">
     {/* Sidebar (model selector) */}
-    <div 
-      className={`h-full w-72 bg-neutral-900 border-r border-blue-900 shadow-lg z-10 transition-all duration-300 ${
+    <div
+      className={`fixed top-0 left-0 h-full w-72 bg-neutral-900 border-r border-blue-900 shadow-lg z-20 transition-transform duration-300 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
+      style={{ willChange: 'transform' }}
     >
       <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
         <span className="text-lg font-bold text-blue-400">Select Model</span>
@@ -419,7 +420,7 @@ export default function AUGMINT() {
     {/* Sidebar overlay - only shown when sidebar is open on small screens */}
     {sidebarOpen && (
       <div
-        className="md:hidden absolute inset-0 bg-black/40 z-5"
+        className="md:hidden fixed inset-0 bg-black/40 z-10"
         onClick={() => setSidebarOpen(false)}
         aria-label="Close sidebar overlay"
       />

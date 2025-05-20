@@ -2,6 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import {
+  Menu,
+  X,
+  Hand,
+  HandMetal,
+  Camera,
+  Repeat,
+  HelpCircle,
+} from 'lucide-react';
 
 const models = [
   { name: 'Bear', path: '/bear/scene.gltf' },
@@ -273,155 +282,185 @@ export default function AUGMINT() {
     }
   }, [showToast]);
 
-  return (
-    <div className="relative w-full h-screen bg-black text-gray-50 overflow-hidden">
-      {/* Video background - centered */}
-      <video 
-        ref={videoRef} 
-        className="absolute inset-0 w-full h-full object-cover -z-10" 
-        playsInline 
-        muted
-      />
-      
-      {/* 3D canvas - also centered */}
-      <div ref={canvasRef} className="absolute inset-0 w-full h-full z-0" />
-
-      {/* Top controls bar */}
-      <div className="absolute top-0 left-0 right-0 bg-gray-900 bg-opacity-95 p-3 flex justify-between items-center z-40 shadow-lg">
-        {/* Left side - App name */}
-        <div className="flex items-center">
-          <h1 className="text-2xl font-bold text-white px-2 py-1">AUGMINT</h1>
-        </div>
-
-        {/* Middle - Model controls button */}
-        <div>
-          <button 
-            onClick={toggleModelControls}
-            className={`px-4 py-2 rounded-lg text-white font-medium transition-all ${
-              modelControlsActive ? 'bg-blue-600 shadow-lg' : 'bg-gray-700 hover:bg-gray-600'
+ return (
+  <div className="flex h-screen w-full bg-neutral-950 text-gray-100 overflow-hidden">
+    {/* Sidebar (model selector) */}
+    <div 
+      className={`h-full w-72 bg-neutral-900 border-r border-blue-900 shadow-lg z-10 transition-all duration-300 ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
+      <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
+        <span className="text-lg font-bold text-blue-400">Select Model</span>
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="text-2xl text-blue-300 hover:text-blue-500 transition"
+          aria-label="Close sidebar"
+        >
+          ✕
+        </button>
+      </div>
+      <div className="p-5 space-y-3 flex flex-col">
+        {models.map((m) => (
+          <button
+            key={m.name}
+            onClick={() => {
+              setSelectedModel(m);
+              setSidebarOpen(false);
+              setModelControlsActive(false);
+              if (renderer && controlsRef.current) {
+                renderer.domElement.style.pointerEvents = 'none';
+                controlsRef.current.enabled = false;
+              }
+            }}
+            className={`w-full text-left px-4 py-3 rounded-lg font-medium transition ${
+              selectedModel.name === m.name
+                ? 'bg-blue-600 text-white shadow'
+                : 'bg-neutral-800 hover:bg-blue-800 text-blue-200'
             }`}
           >
-            {modelControlsActive ? '✋ Exit 3D Mode' : '👆 Control Model'}
+            {m.name}
           </button>
+        ))}
+      </div>
+    </div>
+
+    {/* Main content area */}
+    <div className="flex flex-col w-full h-full relative">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-b from-neutral-900/95 to-neutral-900/60 shadow-lg z-10">
+        {/* App name */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="bg-blue-700 hover:bg-blue-600 p-2 rounded-lg text-white transition"
+            aria-label="Toggle model selector"
+          >
+            <Menu size={22} />
+          </button>
+          <span className="text-2xl font-extrabold tracking-tight text-blue-400">AUGMINT</span>
         </div>
-        
-        {/* Right side - Action buttons */}
-        <div className="flex gap-3 mr-1">
-          {/* Camera flip button */}
-          <button 
+        {/* Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleModelControls}
+            className={`px-4 py-2 rounded-lg font-semibold transition-all shadow ${
+              modelControlsActive
+                ? 'bg-blue-600 text-white'
+                : 'bg-neutral-800 hover:bg-neutral-700 text-blue-200'
+            } flex items-center gap-2`}
+          >
+            {modelControlsActive ? (
+              <>
+                <HandMetal size={18} /> Exit 3D
+              </>
+            ) : (
+              <>
+                <Hand size={18} /> Control Model
+              </>
+            )}
+          </button>
+          <button
             onClick={toggleCameraFacing}
-            className="bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white transition"
+            className="bg-neutral-800 hover:bg-neutral-700 p-3 rounded-lg text-blue-300 transition"
             aria-label="Switch camera"
           >
-            {facingMode === 'environment' ? '📱' : '🤳'}
+            <Repeat size={20} />
           </button>
-          
-          {/* Capture photo button */}
-          <button 
+          <button
             onClick={capturePhoto}
-            className="bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white transition"
+            className="bg-neutral-800 hover:bg-neutral-700 p-3 rounded-lg text-blue-300 transition"
             aria-label="Take photo"
           >
-            📸
+            <Camera size={20} />
           </button>
-          
-          {/* Help button */}
-          <button 
+          <button
             onClick={() => setShowHelp(!showHelp)}
-            className="bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white transition"
+            className="bg-neutral-800 hover:bg-neutral-700 p-3 rounded-lg text-blue-300 transition"
             aria-label="Help"
           >
-            ❓
-          </button>
-          
-          {/* Sidebar toggle button */}
-          <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white transition"
-            aria-label="Menu"
-          >
-            {sidebarOpen ? '✕' : '☰'}
+            <HelpCircle size={20} />
           </button>
         </div>
       </div>
-      
-      {/* Model controls active indicator */}
-      {modelControlsActive && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 px-4 py-2 rounded-lg text-white text-sm z-40 pointer-events-none shadow-lg">
-          3D Controls Active
-        </div>
-      )}
-      
-      {/* Sidebar with improved dark theme */}
-      <div className={`absolute top-0 right-0 h-full bg-gray-900 bg-opacity-95 p-6 transition-all duration-300 z-30 pt-20 shadow-xl ${
-        sidebarOpen ? 'w-64 translate-x-0' : 'w-0 translate-x-full overflow-hidden'
-      }`}>
-        <div className="mt-4">
-          <h2 className="text-xl font-bold mb-4 text-white">Models</h2>
-          <div className="space-y-2">
-            {models.map((m) => (
-              <button
-                key={m.name}
-                onClick={() => setSelectedModel(m)}
-                className={`block w-full px-4 py-3 rounded text-left transition ${
-                  selectedModel.name === m.name
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-800 hover:bg-gray-700 text-gray-100'
-                }`}
-              >
-                {m.name}
-              </button>
-            ))}
+
+      {/* Main content */}
+      <div className="relative flex-grow overflow-hidden">
+        {/* Video background */}
+        <video
+          ref={videoRef}
+          className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-full min-h-full object-cover z-0"
+          playsInline
+          muted
+        />
+
+        {/* 3D canvas */}
+        <div ref={canvasRef} className="absolute inset-0 w-full h-full z-5" />
+
+        {/* Model controls active indicator */}
+        {modelControlsActive && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-700 px-4 py-2 rounded-lg text-white text-sm z-10 pointer-events-none shadow-lg border border-blue-400">
+            3D Controls Active
           </div>
-        </div>
+        )}
+
+        {/* Toast notification */}
+        {showToast && (
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-neutral-900 bg-opacity-95 text-white px-6 py-3 rounded-xl z-10 pointer-events-none shadow-lg border border-blue-900">
+            <div className="text-center">
+              <p>Welcome to <span className="text-blue-400 font-bold">AUGMINT</span>! Click "Control Model" to interact.</p>
+              <p className="text-sm text-blue-200 mt-1">Tap the ❓ button for help</p>
+            </div>
+          </div>
+        )}
       </div>
-      
-      {/* Help modal with improved dark theme */}
-      {showHelp && (
-        <div className="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 p-6 rounded-xl max-w-md w-full shadow-2xl border border-gray-800">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white">AUGMINT Controls</h3>
-              <button 
-                onClick={() => setShowHelp(false)}
-                className="text-gray-400 hover:text-white text-2xl transition"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-bold mb-1 text-blue-400">Model Controls:</h4>
-                <ul className="ml-4 space-y-1 text-gray-200">
-                  <li>• Click <strong>"Control Model"</strong> to interact with the 3D model</li>
-                  <li>• <strong>One finger/Left mouse</strong>: Rotate model</li>
-                  <li>• <strong>Two fingers pinch/Mouse wheel</strong>: Zoom in/out</li>
-                  <li>• <strong>Two fingers pan/Right mouse</strong>: Move model</li>
-                  <li>• Click <strong>"Exit 3D Mode"</strong> to return to normal scrolling</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-bold mb-1 text-blue-400">Camera Controls:</h4>
-                <ul className="ml-4 space-y-1 text-gray-200">
-                  <li>• <strong>Camera switch</strong>: Toggle front/back camera</li>
-                  <li>• <strong>Camera button</strong>: Take and save a photo</li>
-                  <li>• <strong>Menu button</strong>: Open/close model selector</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Toast notification */}
-      {showToast && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 bg-opacity-95 text-white px-6 py-3 rounded-xl z-50 pointer-events-none shadow-lg">
-          <div className="text-center">
-            <p>Welcome to AUGMINT! Click "Control Model" to interact.</p>
-            <p className="text-sm text-gray-300 mt-1">Tap the ❓ button for help</p>
-          </div>
-        </div>
-      )}
     </div>
-  );
+
+    {/* Sidebar overlay - only shown when sidebar is open on small screens */}
+    {sidebarOpen && (
+      <div
+        className="md:hidden absolute inset-0 bg-black/40 z-5"
+        onClick={() => setSidebarOpen(false)}
+        aria-label="Close sidebar overlay"
+      />
+    )}
+
+    {/* Help modal */}
+    {showHelp && (
+      <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20 p-4">
+        <div className="bg-neutral-900 p-6 rounded-xl max-w-md w-full shadow-2xl border border-blue-900">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold text-blue-400">AUGMINT Controls</h3>
+            <button
+              onClick={() => setShowHelp(false)}
+              className="text-blue-300 hover:text-blue-500 text-2xl transition"
+            >
+              <X size={28} />
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-bold mb-1 text-blue-400">Model Controls:</h4>
+              <ul className="ml-4 space-y-1 text-blue-100">
+                <li>• Click <strong>"Control Model"</strong> to interact with the 3D model</li>
+                <li>• <strong>One finger/Left mouse</strong>: Rotate model</li>
+                <li>• <strong>Two fingers pinch/Mouse wheel</strong>: Zoom in/out</li>
+                <li>• <strong>Two fingers pan/Right mouse</strong>: Move model</li>
+                <li>• Click <strong>"Exit 3D Mode"</strong> to return to normal scrolling</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-1 text-blue-400">Camera Controls:</h4>
+              <ul className="ml-4 space-y-1 text-blue-100">
+                <li>• <strong>Camera switch</strong>: Toggle front/back camera</li>
+                <li>• <strong>Camera button</strong>: Take and save a photo</li>
+                <li>• <strong>Menu button</strong>: Open/close model selector</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+);
 }

@@ -34,6 +34,30 @@ export default function AUGMINT() {
   const [showToast, setShowToast] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
   const [modelControlsActive, setModelControlsActive] = useState(false);
+  const [screenSize, setScreenSize] = useState({
+    isMobile: false,
+    isTablet: false
+  });
+  
+  // Detect screen size for responsive adjustments
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenSize({
+        isMobile: window.innerWidth < 640,
+        isTablet: window.innerWidth >= 640 && window.innerWidth < 1024
+      });
+    };
+    
+    // Initial check
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
   
   // Setup camera stream
   useEffect(() => {
@@ -44,7 +68,11 @@ export default function AUGMINT() {
         }
         
         const constraints = { 
-          video: { facingMode: facingMode } 
+          video: { 
+            facingMode: facingMode,
+            width: { ideal: window.innerWidth },
+            height: { ideal: window.innerHeight }
+          } 
         };
         
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -90,9 +118,14 @@ export default function AUGMINT() {
       scene = new THREE.Scene();
       sceneRef.current = scene;
       
-      // Set up camera
-      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.z = 2;
+      // Set up camera with responsive aspect ratio
+      camera = new THREE.PerspectiveCamera(
+        65, 
+        window.innerWidth / window.innerHeight, 
+        0.1, 
+        1000
+      );
+      camera.position.z = screenSize.isMobile ? 2.5 : 2; // Further away on mobile
 
       // Set up renderer
       rendererLocal = new THREE.WebGLRenderer({ 
@@ -101,6 +134,7 @@ export default function AUGMINT() {
         preserveDrawingBuffer: true 
       });
       rendererLocal.setSize(window.innerWidth, window.innerHeight);
+      rendererLocal.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
       rendererLocal.setClearColor(0x000000, 0);
 
       // Clear and set up canvas
@@ -116,7 +150,7 @@ export default function AUGMINT() {
 
       setRenderer(rendererLocal);
 
-      // Configure orbit controls with strong boundaries
+      // Configure orbit controls with responsive settings
       controls = new OrbitControls(camera, rendererLocal.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.2;
@@ -124,15 +158,19 @@ export default function AUGMINT() {
       controls.enablePan = true;
       controls.enableRotate = true;
       
+      // Adjust control sensitivity based on device
+      controls.rotateSpeed = screenSize.isMobile ? 0.7 : 1;
+      controls.zoomSpeed = screenSize.isMobile ? 0.8 : 1;
+      controls.panSpeed = screenSize.isMobile ? 0.5 : 0.7;
+      
       // Strict constraints to keep model in view
-      controls.minDistance = 0.5; 
-      controls.maxDistance = 3;
+      controls.minDistance = screenSize.isMobile ? 0.7 : 0.5; 
+      controls.maxDistance = screenSize.isMobile ? 4 : 3;
       controls.maxPolarAngle = Math.PI * 0.7; // Don't go too far below
       controls.minPolarAngle = Math.PI * 0.2; // Don't go too far above
       
       // Limit panning to keep model centered
       controls.screenSpacePanning = true;
-      controls.panSpeed = 0.7;
 
       controls.touches = {
         ONE: THREE.TOUCH.ROTATE,
@@ -197,16 +235,19 @@ export default function AUGMINT() {
           gltf.scene.position.y -= center.y;
           gltf.scene.position.z -= center.z;
           
-          // Scale model to reasonable size
+          // Scale model to reasonable size with responsive adjustments
           const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 1 / maxDim;
+          const baseScale = 1 / maxDim;
+          const scaleFactor = screenSize.isMobile ? 0.85 : 1; // Slightly smaller on mobile
+          const scale = baseScale * scaleFactor;
+          
           gltf.scene.scale.set(scale, scale, scale);
           
           modelGroup.add(gltf.scene);
           scene.add(modelGroup);
           
           // Reset camera position to frame model nicely
-          camera.position.z = 2;
+          camera.position.z = screenSize.isMobile ? 2.5 : 2;
           
           // Reset model controls when loading a new model
           setModelControlsActive(false);
@@ -233,7 +274,7 @@ export default function AUGMINT() {
         canvasRef.current.innerHTML = '';
       }
     };
-  }, [selectedModel]);
+  }, [selectedModel, screenSize]);
 
   // Toggle camera facing mode (front/back)
   const toggleCameraFacing = () => {
@@ -272,190 +313,217 @@ export default function AUGMINT() {
     }
   }, [showToast]);
 
- return (
-  <div className="flex h-screen w-full bg-neutral-950 text-gray-100 overflow-hidden">
-    {/* Sidebar (model selector) */}
-    <div
-      className={`fixed top-0 left-0 h-full w-72 bg-neutral-900 border-r border-blue-900 shadow-lg z-20 transition-transform duration-300 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
-      style={{ willChange: 'transform' }}
-    >
-      <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
-        <span className="text-lg font-bold text-blue-400">Select Model</span>
-        <button
-          onClick={() => setSidebarOpen(false)}
-          className="text-2xl text-blue-300 hover:text-blue-500 transition"
-          aria-label="Close sidebar"
-        >
-          ✕
-        </button>
-      </div>
-      <div className="p-5 space-y-3 flex flex-col">
-        {models.map((m) => (
-          <button
-            key={m.name}
-            onClick={() => {
-              setSelectedModel(m);
-              setSidebarOpen(false);
-              setModelControlsActive(false);
-              if (renderer && controlsRef.current) {
-                renderer.domElement.style.pointerEvents = 'none';
-                controlsRef.current.enabled = false;
-              }
-            }}
-            className={`w-full text-left px-4 py-3 rounded-lg font-medium transition ${
-              selectedModel.name === m.name
-                ? 'bg-blue-600 text-white shadow'
-                : 'bg-neutral-800 hover:bg-blue-800 text-blue-200'
-            }`}
-          >
-            {m.name}
-          </button>
-        ))}
-      </div>
-    </div>
+  // Close sidebar when user clicks outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (sidebarOpen && screenSize.isMobile && 
+          !e.target.closest('.sidebar') && 
+          !e.target.closest('.sidebar-toggle')) {
+        setSidebarOpen(false);
+      }
+    };
 
-    {/* Main content area */}
-    <div className="flex flex-col w-full h-full relative">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-b from-neutral-900/95 to-neutral-900/60 shadow-lg z-10">
-        {/* App name */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="bg-blue-700 hover:bg-blue-600 p-2 rounded-lg text-white transition"
-            aria-label="Toggle model selector"
-          >
-            <Menu size={22} />
-          </button>
-          <span className="text-2xl font-extrabold tracking-tight text-blue-400">AUGMINT</span>
-        </div>
-        {/* Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={toggleModelControls}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all shadow ${
-              modelControlsActive
-                ? 'bg-blue-600 text-white'
-                : 'bg-neutral-800 hover:bg-neutral-700 text-blue-200'
-            } flex items-center gap-2`}
-          >
-            {modelControlsActive ? (
-              <>
-                <HandMetal size={18} /> Exit 3D
-              </>
-            ) : (
-              <>
-                <Hand size={18} /> Control Model
-              </>
-            )}
-          </button>
-          <button
-            onClick={toggleCameraFacing}
-            className="bg-neutral-800 hover:bg-neutral-700 p-3 rounded-lg text-blue-300 transition"
-            aria-label="Switch camera"
-          >
-            <Repeat size={20} />
-          </button>
-          <button
-            onClick={capturePhoto}
-            className="bg-neutral-800 hover:bg-neutral-700 p-3 rounded-lg text-blue-300 transition"
-            aria-label="Take photo"
-          >
-            <Camera size={20} />
-          </button>
-          <button
-            onClick={() => setShowHelp(!showHelp)}
-            className="bg-neutral-800 hover:bg-neutral-700 p-3 rounded-lg text-blue-300 transition"
-            aria-label="Help"
-          >
-            <HelpCircle size={20} />
-          </button>
-        </div>
-      </div>
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [sidebarOpen, screenSize.isMobile]);
 
-      {/* Main content */}
-      <div className="relative flex-grow overflow-hidden">
-        {/* Video background */}
-        <video
-          ref={videoRef}
-          className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-full min-h-full object-cover z-0"
-          playsInline
-          muted
-        />
-
-        {/* 3D canvas */}
-        <div ref={canvasRef} className="absolute inset-0 w-full h-full z-5" />
-
-        {/* Model controls active indicator */}
-        {modelControlsActive && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-700 px-4 py-2 rounded-lg text-white text-sm z-10 pointer-events-none shadow-lg border border-blue-400">
-            3D Controls Active
-          </div>
-        )}
-
-        {/* Toast notification */}
-        {showToast && (
-          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-neutral-900 bg-opacity-95 text-white px-6 py-3 rounded-xl z-10 pointer-events-none shadow-lg border border-blue-900">
-            <div className="text-center">
-              <p>Welcome to <span className="text-blue-400 font-bold">AUGMINT</span>! Click "Control Model" to interact.</p>
-              <p className="text-sm text-blue-200 mt-1">Tap the ❓ button for help</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-
-    {/* Sidebar overlay - only shown when sidebar is open on small screens */}
-    {sidebarOpen && (
+  return (
+    <div className="flex h-screen w-full bg-neutral-950 text-gray-100 overflow-hidden">
+      {/* Sidebar (model selector) */}
       <div
-        className="md:hidden fixed inset-0 bg-black/40 z-10"
-        onClick={() => setSidebarOpen(false)}
-        aria-label="Close sidebar overlay"
-      />
-    )}
-
-    {/* Help modal */}
-    {showHelp && (
-      <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20 p-4">
-        <div className="bg-neutral-900 p-6 rounded-xl max-w-md w-full shadow-2xl border border-blue-900">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-blue-400">AUGMINT Controls</h3>
+        className={`sidebar fixed top-0 left-0 h-full bg-neutral-900 border-r border-blue-900 shadow-lg z-30 transition-transform duration-300 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${screenSize.isMobile ? 'w-64' : 'w-72'}`}
+        style={{ willChange: 'transform' }}
+      >
+        <div className="flex items-center justify-between px-4 py-4 border-b border-neutral-800">
+          <span className={`font-bold text-blue-400 ${screenSize.isMobile ? 'text-base' : 'text-lg'}`}>Select Model</span>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="text-blue-300 hover:text-blue-500 transition"
+            aria-label="Close sidebar"
+          >
+            <X size={screenSize.isMobile ? 20 : 24} />
+          </button>
+        </div>
+        <div className="p-4 space-y-2 flex flex-col">
+          {models.map((m) => (
             <button
-              onClick={() => setShowHelp(false)}
-              className="text-blue-300 hover:text-blue-500 text-2xl transition"
+              key={m.name}
+              onClick={() => {
+                setSelectedModel(m);
+                setSidebarOpen(false);
+                setModelControlsActive(false);
+                if (renderer && controlsRef.current) {
+                  renderer.domElement.style.pointerEvents = 'none';
+                  controlsRef.current.enabled = false;
+                }
+              }}
+              className={`w-full text-left px-3 py-2 rounded-lg font-medium transition ${
+                selectedModel.name === m.name
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'bg-neutral-800 hover:bg-blue-800 text-blue-200'
+              } ${screenSize.isMobile ? 'text-sm' : 'text-base'}`}
             >
-              <X size={28} />
+              {m.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main content area */}
+      <div className="flex flex-col w-full h-full relative">
+        {/* Top bar */}
+        <div className={`flex items-center justify-between px-2 sm:px-4 py-2 bg-gradient-to-b from-neutral-900/95 to-neutral-900/60 shadow-lg z-10 ${screenSize.isMobile ? 'flex-wrap gap-1' : ''}`}>
+          {/* App name */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="sidebar-toggle bg-blue-700 hover:bg-blue-600 p-1.5 sm:p-2 rounded-lg text-white transition"
+              aria-label="Toggle model selector"
+            >
+              <Menu size={screenSize.isMobile ? 18 : 22} />
+            </button>
+            <span className={`font-extrabold tracking-tight text-blue-400 ${screenSize.isMobile ? 'text-xl' : 'text-2xl'}`}>AUGMINT</span>
+          </div>
+          
+          {/* Controls - use flexbox to wrap on mobile */}
+          <div className={`flex items-center gap-1 sm:gap-2 ${screenSize.isMobile ? 'flex-wrap justify-end' : ''}`}>
+            <button
+              onClick={toggleModelControls}
+              className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg font-semibold transition-all shadow ${
+                modelControlsActive
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-neutral-800 hover:bg-neutral-700 text-blue-200'
+              } flex items-center gap-1 sm:gap-2 ${screenSize.isMobile ? 'text-xs' : 'text-sm'}`}
+            >
+              {modelControlsActive ? (
+                <>
+                  <HandMetal size={screenSize.isMobile ? 14 : 18} />
+                  {screenSize.isMobile ? 'Exit' : 'Exit 3D'}
+                </>
+              ) : (
+                <>
+                  <Hand size={screenSize.isMobile ? 14 : 18} />
+                  {screenSize.isMobile ? '3D' : 'Control Model'}
+                </>
+              )}
+            </button>
+            <button
+              onClick={toggleCameraFacing}
+              className="bg-neutral-800 hover:bg-neutral-700 p-2 sm:p-3 rounded-lg text-blue-300 transition"
+              aria-label="Switch camera"
+            >
+              <Repeat size={screenSize.isMobile ? 16 : 20} />
+            </button>
+            <button
+              onClick={capturePhoto}
+              className="bg-neutral-800 hover:bg-neutral-700 p-2 sm:p-3 rounded-lg text-blue-300 transition"
+              aria-label="Take photo"
+            >
+              <Camera size={screenSize.isMobile ? 16 : 20} />
+            </button>
+            <button
+              onClick={() => setShowHelp(!showHelp)}
+              className="bg-neutral-800 hover:bg-neutral-700 p-2 sm:p-3 rounded-lg text-blue-300 transition"
+              aria-label="Help"
+            >
+              <HelpCircle size={screenSize.isMobile ? 16 : 20} />
             </button>
           </div>
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-bold mb-1 text-blue-400">Models:</h4>
-              <ul>
-                <li className="ml-4 space-y-1 text-blue-100">• Click on the top left sidebar for more models</li>
-              </ul>
-              <h4 className="font-bold mb-1 text-blue-400">Model Controls:</h4>
-              <ul className="ml-4 space-y-1 text-blue-100">
-                <li>• Click <strong>"Control Model"</strong> to interact with the 3D model</li>
-                <li>• <strong>One finger/Left mouse</strong>: Rotate model</li>
-                <li>• <strong>Two fingers pinch/Mouse wheel</strong>: Zoom in/out</li>
-                <li>• <strong>Two fingers pan/Right mouse</strong>: Move model</li>
-                <li>• Click <strong>"Exit 3D Mode"</strong> to return to normal scrolling</li>
-              </ul>
+        </div>
+
+        {/* Main content */}
+        <div className="relative flex-grow overflow-hidden">
+          {/* Video background */}
+          <video
+            ref={videoRef}
+            className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-full min-h-full object-cover z-0"
+            playsInline
+            muted
+          />
+
+          {/* 3D canvas */}
+          <div ref={canvasRef} className="absolute inset-0 w-full h-full z-5" />
+
+          {/* Model controls active indicator */}
+          {modelControlsActive && (
+            <div className={`absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-white shadow-lg border border-blue-400 z-10 pointer-events-none ${screenSize.isMobile ? 'text-xs' : 'text-sm'}`}>
+              3D Controls Active
             </div>
-            <div>
-              <h4 className="font-bold mb-1 text-blue-400">Camera Controls:</h4>
-              <ul className="ml-4 space-y-1 text-blue-100">
-                <li>• <strong>Camera switch</strong>: Toggle front/back camera</li>
-                <li>• <strong>Camera button</strong>: Take and save a photo</li>
-                <li>• <strong>Menu button</strong>: Open/close model selector</li>
-              </ul>
+          )}
+
+          {/* Toast notification - responsive sizing */}
+          {showToast && (
+            <div className={`absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-neutral-900 bg-opacity-95 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl z-10 pointer-events-none shadow-lg border border-blue-900 max-w-xs sm:max-w-md text-center ${screenSize.isMobile ? 'w-11/12' : ''}`}>
+              <div className="flex flex-col items-center">
+                <p className={screenSize.isMobile ? 'text-sm' : 'text-base'}>
+                  Welcome to <span className="text-blue-400 font-bold">AUGMINT</span>! Click "
+                  {screenSize.isMobile ? '3D' : 'Control Model'}" to interact.
+                </p>
+                <p className={`text-blue-200 mt-1 ${screenSize.isMobile ? 'text-xs' : 'text-sm'}`}>
+                  Tap the ❓ button for help
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sidebar overlay - only shown when sidebar is open */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-20"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close sidebar overlay"
+        />
+      )}
+
+      {/* Help modal - responsive */}
+      {showHelp && (
+        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-40 p-3 sm:p-4">
+          <div className={`bg-neutral-900 p-4 sm:p-6 rounded-xl w-full shadow-2xl border border-blue-900 ${screenSize.isMobile ? 'max-w-xs' : 'max-w-md'}`}>
+            <div className="flex justify-between items-center mb-3 sm:mb-4">
+              <h3 className={`font-bold text-blue-400 ${screenSize.isMobile ? 'text-lg' : 'text-xl'}`}>AUGMINT Controls</h3>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="text-blue-300 hover:text-blue-500 transition"
+              >
+                <X size={screenSize.isMobile ? 20 : 28} />
+              </button>
+            </div>
+            <div className="space-y-3 sm:space-y-4">
+              <div>
+                <h4 className="font-bold mb-1 text-blue-400">Models:</h4>
+                <ul>
+                  <li className={`ml-3 sm:ml-4 text-blue-100 ${screenSize.isMobile ? 'text-sm' : 'text-base'}`}>• Click on the top left sidebar for more models</li>
+                </ul>
+                <h4 className="font-bold mb-1 text-blue-400 mt-2">Model Controls:</h4>
+                <ul className={`ml-3 sm:ml-4 space-y-0.5 sm:space-y-1 text-blue-100 ${screenSize.isMobile ? 'text-sm' : 'text-base'}`}>
+                  <li>• Click <strong>{screenSize.isMobile ? '"3D"' : '"Control Model"'}</strong> to interact with the 3D model</li>
+                  <li>• <strong>One finger/Left mouse</strong>: Rotate model</li>
+                  <li>• <strong>Two fingers pinch/Mouse wheel</strong>: Zoom in/out</li>
+                  <li>• <strong>Two fingers pan/Right mouse</strong>: Move model</li>
+                  <li>• Click <strong>{screenSize.isMobile ? '"Exit"' : '"Exit 3D Mode"'}</strong> to return to normal scrolling</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold mb-1 text-blue-400">Camera Controls:</h4>
+                <ul className={`ml-3 sm:ml-4 space-y-0.5 sm:space-y-1 text-blue-100 ${screenSize.isMobile ? 'text-sm' : 'text-base'}`}>
+                  <li>• <strong>Camera switch</strong>: Toggle front/back camera</li>
+                  <li>• <strong>Camera button</strong>: Take and save a photo</li>
+                  <li>• <strong>Menu button</strong>: Open/close model selector</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
 }

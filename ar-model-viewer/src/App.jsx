@@ -93,16 +93,25 @@ export default function AUGMINT() {
 
       // Configure orbit controls for mouse/touch interaction
       controls = new OrbitControls(camera, rendererLocal.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.25;
-      controls.enableZoom = true;
-      controls.enablePan = true;
-      controls.enableRotate = true;
-      controls.touches = {
-        ONE: THREE.TOUCH.ROTATE,
-        TWO: THREE.TOUCH.DOLLY_PAN
-      };
-      controlsRef.current = controls;
+controls.enableDamping = true;
+controls.dampingFactor = 0.25;
+controls.enableZoom = true;
+controls.enablePan = true;
+controls.enableRotate = true;
+controls.touches = {
+  ONE: THREE.TOUCH.ROTATE,
+  TWO: THREE.TOUCH.DOLLY_PAN
+};
+controlsRef.current = controls;
+
+// Enable controls only when pointer is over the canvas
+rendererLocal.domElement.addEventListener('pointerenter', () => {
+  controls.enabled = true;
+});
+rendererLocal.domElement.addEventListener('pointerleave', () => {
+  controls.enabled = false;
+});
+controls.enabled = false; // Start disabled
 
       // Add lights to the scene
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -233,7 +242,7 @@ export default function AUGMINT() {
       <video ref={videoRef} className="absolute top-0 left-0 w-full h-full object-cover -z-10" muted></video>
       
       {/* 3D canvas */}
-      <div ref={canvasRef} className="absolute top-0 left-0 w-full h-full"></div>
+      <div ref={canvasRef} className="absolute top-0 left-0 w-full h-full" ></div>
 
       {/* Sidebar toggle button */}
       <button 

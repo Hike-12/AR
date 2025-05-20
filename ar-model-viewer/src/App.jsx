@@ -21,23 +21,21 @@ export default function AUGMINT() {
   const modelGroupRef = useRef();
   const sceneRef = useRef();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [facingMode, setFacingMode] = useState('environment'); // 'environment' is back camera
+  const [facingMode, setFacingMode] = useState('environment');
   const [showToast, setShowToast] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  const [modelControlsActive, setModelControlsActive] = useState(false);
   
   // Setup camera stream
   useEffect(() => {
     async function setupCamera() {
       try {
-        // Stop any existing stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
         }
         
         const constraints = { 
-          video: { 
-            facingMode: facingMode 
-          } 
+          video: { facingMode: facingMode } 
         };
         
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -54,13 +52,23 @@ export default function AUGMINT() {
 
     setupCamera();
     
-    // Cleanup function
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
   }, [facingMode]);
+
+  // Toggle model controls
+  const toggleModelControls = () => {
+    const newState = !modelControlsActive;
+    setModelControlsActive(newState);
+    
+    if (renderer && controlsRef.current) {
+      renderer.domElement.style.pointerEvents = newState ? 'auto' : 'none';
+      controlsRef.current.enabled = newState;
+    }
+  };
 
   // Setup Three.js scene
   useEffect(() => {
@@ -69,57 +77,78 @@ export default function AUGMINT() {
     modelGroupRef.current = modelGroup;
     
     const init = () => {
+      // Create scene
       scene = new THREE.Scene();
       sceneRef.current = scene;
       
-      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+      // Set up camera
+      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
       camera.position.z = 2;
 
-      rendererLocal = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      // Set up renderer
+      rendererLocal = new THREE.WebGLRenderer({ 
+        alpha: true, 
+        antialias: true,
+        preserveDrawingBuffer: true 
+      });
       rendererLocal.setSize(window.innerWidth, window.innerHeight);
+      rendererLocal.setClearColor(0x000000, 0);
 
-      // Clear previous canvas if any
+      // Clear and set up canvas
       if (canvasRef.current) {
         canvasRef.current.innerHTML = '';
         rendererLocal.domElement.style.position = 'absolute';
-        rendererLocal.domElement.style.top = '0';
-        rendererLocal.domElement.style.left = '0';
+        rendererLocal.domElement.style.inset = '0';
         rendererLocal.domElement.style.width = '100%';
         rendererLocal.domElement.style.height = '100%';
+        rendererLocal.domElement.style.pointerEvents = 'none'; // Default: can't interact
         canvasRef.current.appendChild(rendererLocal.domElement);
       }
 
       setRenderer(rendererLocal);
 
-      // Configure orbit controls for mouse/touch interaction
+      // Configure orbit controls with strong boundaries
       controls = new OrbitControls(camera, rendererLocal.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.25;
-controls.enableZoom = true;
-controls.enablePan = true;
-controls.enableRotate = true;
-controls.touches = {
-  ONE: THREE.TOUCH.ROTATE,
-  TWO: THREE.TOUCH.DOLLY_PAN
-};
-controlsRef.current = controls;
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.2;
+      controls.enableZoom = true;
+      controls.enablePan = true;
+      controls.enableRotate = true;
+      
+      // Strict constraints to keep model in view
+      controls.minDistance = 0.5; 
+      controls.maxDistance = 3;
+      controls.maxPolarAngle = Math.PI * 0.7; // Don't go too far below
+      controls.minPolarAngle = Math.PI * 0.2; // Don't go too far above
+      
+      // Limit panning to keep model centered
+      controls.screenSpacePanning = true;
+      controls.panSpeed = 0.7;
+      
+      // Restrict rotation to prevent disorientation
+      controls.minAzimuthAngle = -Math.PI / 2;
+      controls.maxAzimuthAngle = Math.PI / 2;
 
-// Enable controls only when pointer is over the canvas
-rendererLocal.domElement.addEventListener('pointerenter', () => {
-  controls.enabled = true;
-});
-rendererLocal.domElement.addEventListener('pointerleave', () => {
-  controls.enabled = false;
-});
-controls.enabled = false; // Start disabled
+      controls.touches = {
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN
+      };
+      
+      // Disabled by default - will be enabled by button
+      controls.enabled = false;
+      controlsRef.current = controls;
 
-      // Add lights to the scene
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      // Add lights for better model visibility
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
       scene.add(ambientLight);
       
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(0, 10, 5);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+      directionalLight.position.set(1, 10, 5);
       scene.add(directionalLight);
+      
+      const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+      fillLight.position.set(-1, -1, 2);
+      scene.add(fillLight);
 
       // Set up GLTF loader
       loader = new GLTFLoader();
@@ -136,7 +165,13 @@ controls.enabled = false; // Start disabled
       // Animation loop
       const animate = () => {
         requestAnimationFrame(animate);
-        controls.update(); // required for damping
+        controls.update();
+        
+        // Add slight rotation to model when not actively controlled
+        if (!modelControlsActive && modelGroup) {
+          modelGroup.rotation.y += 0.002;
+        }
+        
         rendererLocal.render(scene, camera);
       };
 
@@ -158,7 +193,7 @@ controls.enabled = false; // Start disabled
           const center = box.getCenter(new THREE.Vector3());
           const size = box.getSize(new THREE.Vector3());
           
-          // Reset position to center
+          // Center model properly
           gltf.scene.position.x -= center.x;
           gltf.scene.position.y -= center.y;
           gltf.scene.position.z -= center.z;
@@ -170,10 +205,21 @@ controls.enabled = false; // Start disabled
           
           modelGroup.add(gltf.scene);
           scene.add(modelGroup);
+          
+          // Reset camera position to frame model nicely
+          camera.position.z = 2;
+          
+          // Reset model controls when loading a new model
+          setModelControlsActive(false);
+          if (renderer) {
+            renderer.domElement.style.pointerEvents = 'none';
+          }
+          if (controlsRef.current) {
+            controlsRef.current.enabled = false;
+            controlsRef.current.reset();
+          }
         },
-        (xhr) => {
-          // Loading progress if needed
-        },
+        undefined,
         (error) => {
           console.error('Error loading model:', error);
         }
@@ -199,21 +245,17 @@ controls.enabled = false; // Start disabled
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
     
-    // Create a temporary canvas to capture both video and 3D content
     const captureCanvas = document.createElement('canvas');
     captureCanvas.width = videoRef.current.videoWidth;
     captureCanvas.height = videoRef.current.videoHeight;
     const ctx = captureCanvas.getContext('2d');
     
-    // Draw the video frame
     ctx.drawImage(videoRef.current, 0, 0);
     
-    // Get the current renderer canvas and draw it on top
     if (renderer) {
       ctx.drawImage(renderer.domElement, 0, 0, captureCanvas.width, captureCanvas.height);
     }
     
-    // Create download link
     const link = document.createElement('a');
     link.download = `AUGMINT_${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
     link.href = captureCanvas.toDataURL('image/png');
@@ -232,32 +274,90 @@ controls.enabled = false; // Start disabled
   }, [showToast]);
 
   return (
-    <div className="relative w-full h-screen bg-black text-white">
-      {/* App name */}
-      <div className="absolute top-4 left-4 z-30">
-        <h1 className="text-2xl font-bold text-white bg-gray-900 bg-opacity-60 px-3 py-1 rounded">AUGMINT</h1>
+    <div className="relative w-full h-screen bg-black text-gray-50 overflow-hidden">
+      {/* Video background - centered */}
+      <video 
+        ref={videoRef} 
+        className="absolute inset-0 w-full h-full object-cover -z-10" 
+        playsInline 
+        muted
+      />
+      
+      {/* 3D canvas - also centered */}
+      <div ref={canvasRef} className="absolute inset-0 w-full h-full z-0" />
+
+      {/* Top controls bar */}
+      <div className="absolute top-0 left-0 right-0 bg-gray-900 bg-opacity-95 p-3 flex justify-between items-center z-40 shadow-lg">
+        {/* Left side - App name */}
+        <div className="flex items-center">
+          <h1 className="text-2xl font-bold text-white px-2 py-1">AUGMINT</h1>
+        </div>
+
+        {/* Middle - Model controls button */}
+        <div>
+          <button 
+            onClick={toggleModelControls}
+            className={`px-4 py-2 rounded-lg text-white font-medium transition-all ${
+              modelControlsActive ? 'bg-blue-600 shadow-lg' : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+          >
+            {modelControlsActive ? '✋ Exit 3D Mode' : '👆 Control Model'}
+          </button>
+        </div>
+        
+        {/* Right side - Action buttons */}
+        <div className="flex gap-3 mr-1">
+          {/* Camera flip button */}
+          <button 
+            onClick={toggleCameraFacing}
+            className="bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white transition"
+            aria-label="Switch camera"
+          >
+            {facingMode === 'environment' ? '📱' : '🤳'}
+          </button>
+          
+          {/* Capture photo button */}
+          <button 
+            onClick={capturePhoto}
+            className="bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white transition"
+            aria-label="Take photo"
+          >
+            📸
+          </button>
+          
+          {/* Help button */}
+          <button 
+            onClick={() => setShowHelp(!showHelp)}
+            className="bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white transition"
+            aria-label="Help"
+          >
+            ❓
+          </button>
+          
+          {/* Sidebar toggle button */}
+          <button 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="bg-gray-800 hover:bg-gray-700 p-3 rounded-lg text-white transition"
+            aria-label="Menu"
+          >
+            {sidebarOpen ? '✕' : '☰'}
+          </button>
+        </div>
       </div>
       
-      {/* Video background */}
-      <video ref={videoRef} className="absolute top-0 left-0 w-full h-full object-cover -z-10" muted></video>
+      {/* Model controls active indicator */}
+      {modelControlsActive && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-blue-600 px-4 py-2 rounded-lg text-white text-sm z-40 pointer-events-none shadow-lg">
+          3D Controls Active
+        </div>
+      )}
       
-      {/* 3D canvas */}
-      <div ref={canvasRef} className="absolute top-0 left-0 w-full h-full" ></div>
-
-      {/* Sidebar toggle button */}
-      <button 
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute top-4 right-4 z-40 bg-gray-900 bg-opacity-80 p-3 rounded-full text-white"
-      >
-        {sidebarOpen ? '✕' : '☰'}
-      </button>
-      
-      {/* Sidebar */}
-      <div className={`absolute top-0 right-0 h-full bg-gray-900 bg-opacity-80 p-6 transition-all duration-300 z-30 ${
+      {/* Sidebar with improved dark theme */}
+      <div className={`absolute top-0 right-0 h-full bg-gray-900 bg-opacity-95 p-6 transition-all duration-300 z-30 pt-20 shadow-xl ${
         sidebarOpen ? 'w-64 translate-x-0' : 'w-0 translate-x-full overflow-hidden'
       }`}>
-        <div className="mt-12">
-          <h2 className="text-xl font-bold mb-4">Models</h2>
+        <div className="mt-4">
+          <h2 className="text-xl font-bold mb-4 text-white">Models</h2>
           <div className="space-y-2">
             {models.map((m) => (
               <button
@@ -265,8 +365,8 @@ controls.enabled = false; // Start disabled
                 onClick={() => setSelectedModel(m)}
                 className={`block w-full px-4 py-3 rounded text-left transition ${
                   selectedModel.name === m.name
-                    ? 'bg-blue-600'
-                    : 'bg-gray-700 hover:bg-gray-600'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 hover:bg-gray-700 text-gray-100'
                 }`}
               >
                 {m.name}
@@ -276,61 +376,33 @@ controls.enabled = false; // Start disabled
         </div>
       </div>
       
-      {/* Camera controls buttons group - top right */}
-      <div className="absolute top-16 right-4 z-30 flex flex-col space-y-3">
-        {/* Camera flip button */}
-        <button 
-          onClick={toggleCameraFacing}
-          className="bg-gray-900 bg-opacity-80 p-3 rounded-full text-white"
-          aria-label="Switch camera"
-        >
-          {facingMode === 'environment' ? '📱' : '🤳'}
-        </button>
-        
-        {/* Capture photo button */}
-        <button 
-          onClick={capturePhoto}
-          className="bg-gray-900 bg-opacity-80 p-3 rounded-full text-white"
-          aria-label="Take photo"
-        >
-          📸
-        </button>
-        
-        {/* Help button */}
-        <button 
-          onClick={() => setShowHelp(!showHelp)}
-          className="bg-gray-900 bg-opacity-80 p-3 rounded-full text-white"
-          aria-label="Help"
-        >
-          ❓
-        </button>
-      </div>
-      
-      {/* Help modal */}
+      {/* Help modal with improved dark theme */}
       {showHelp && (
-        <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 p-6 rounded-xl max-w-md w-full">
+        <div className="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 p-6 rounded-xl max-w-md w-full shadow-2xl border border-gray-800">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">AUGMINT Controls</h3>
+              <h3 className="text-xl font-bold text-white">AUGMINT Controls</h3>
               <button 
                 onClick={() => setShowHelp(false)}
-                className="text-gray-400 hover:text-white text-2xl"
+                className="text-gray-400 hover:text-white text-2xl transition"
               >
                 ✕
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <h4 className="font-bold mb-1">Model Controls:</h4>
-                <ul className="ml-4 space-y-1">
+                <h4 className="font-bold mb-1 text-blue-400">Model Controls:</h4>
+                <ul className="ml-4 space-y-1 text-gray-200">
+                  <li>• Click <strong>"Control Model"</strong> to interact with the 3D model</li>
                   <li>• <strong>One finger/Left mouse</strong>: Rotate model</li>
                   <li>• <strong>Two fingers pinch/Mouse wheel</strong>: Zoom in/out</li>
                   <li>• <strong>Two fingers pan/Right mouse</strong>: Move model</li>
+                  <li>• Click <strong>"Exit 3D Mode"</strong> to return to normal scrolling</li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-bold mb-1">Camera Controls:</h4>
-                <ul className="ml-4 space-y-1">
+                <h4 className="font-bold mb-1 text-blue-400">Camera Controls:</h4>
+                <ul className="ml-4 space-y-1 text-gray-200">
                   <li>• <strong>Camera switch</strong>: Toggle front/back camera</li>
                   <li>• <strong>Camera button</strong>: Take and save a photo</li>
                   <li>• <strong>Menu button</strong>: Open/close model selector</li>
@@ -343,9 +415,9 @@ controls.enabled = false; // Start disabled
       
       {/* Toast notification */}
       {showToast && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 bg-opacity-90 text-white px-6 py-3 rounded-xl z-50 pointer-events-none animate-fade-in-up shadow-lg">
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 bg-opacity-95 text-white px-6 py-3 rounded-xl z-50 pointer-events-none shadow-lg">
           <div className="text-center">
-            <p>Welcome to AUGMINT! Use gestures to control 3D models.</p>
+            <p>Welcome to AUGMINT! Click "Control Model" to interact.</p>
             <p className="text-sm text-gray-300 mt-1">Tap the ❓ button for help</p>
           </div>
         </div>

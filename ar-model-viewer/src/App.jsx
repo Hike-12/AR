@@ -18,6 +18,11 @@ const models = [
   { name: 'Owl', path: '/owl/scene.gltf' },
   { name: 'Panther', path: '/panther/scene.gltf' },
   { name: 'Horse', path: '/horse/scene.gltf' },
+  { name: 'Tank', path: '/tank/scene.gltf' },
+  { name: 'Skull', path: '/skull/scene.gltf' },
+  { name: 'Skeleton', path: '/skeleton/scene.gltf' },
+  { name: 'Dog', path: '/dog/scene.gltf' },
+  { name: 'Bike', path: '/bike/scene.gltf' },
 ];
 
 export default function AUGMINT() {

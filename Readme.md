@@ -148,13 +148,41 @@ ar-model-viewer/
 
 All 3D models are licensed under CC-BY-4.0 and properly attributed:
 
+### Animals
 - **Bear** - Wild Mesh (No Rig/Animations) by WildMesh 3D Free
 - **Elk** - Wild Mesh (No Rig/Animations) by WildMesh 3D Free  
 - **Owl** - Realistic Owl 3D Model by WildMesh 3D Free
 - **Panther** - Realistic Panther 3D Model by WildMesh 3D Free
 - **Horse** - Horse Free Download by pgonarg
+- **Dog** - 3d dog cute by Tech developers
 
-*View individual license files in each model's public folder for full attribution.*
+### Objects & Vehicles
+- **Tank** - T-62A Main Battle Tank by Muhamad Mirza Arrafi
+- **Bike** - Honda CB175 motorcycle - Downloadable 3D scan by David Antalek
+
+### Human Anatomy
+- **Skull** - Skull downloadable by martinjario
+- **Skeleton** - SKELETON (Esqueleto) - Downloadable by Daniel Geraldini
+
+### Full Attribution Credits
+
+**Animals:**
+- This work includes "Bear – Wild Mesh (No Rig / No Animations)" (https://sketchfab.com/3d-models/bear-wild-mesh-no-rig-no-animations-44a214e89efc4ec6bb3074225d84a316) by WildMesh 3D Free (https://sketchfab.com/WildMesh_3D) licensed under CC-BY-4.0
+- This work includes "Elk – Wild Mesh (No Rig / No Animations)" (https://sketchfab.com/3d-models/elk-wild-mesh-no-rig-no-animations-24b28b3b9e7d4ea0b8ddc0c0cf891ed6) by WildMesh 3D Free (https://sketchfab.com/WildMesh_3D) licensed under CC-BY-4.0
+- This work includes "Realistic Owl 3D Model" (https://sketchfab.com/3d-models/realistic-owl-3d-model-cc55d47eda3e4e90b246b35276b480aa) by WildMesh 3D Free (https://sketchfab.com/WildMesh_3D) licensed under CC-BY-4.0
+- This work includes "Realistic Panther / Pantera 3D Model" (https://sketchfab.com/3d-models/realistic-panther-pantera-3d-model-e02fb5363af240e3a108a47a9465f056) by WildMesh 3D Free (https://sketchfab.com/WildMesh_3D) licensed under CC-BY-4.0
+- This work includes "Horse free download" (https://sketchfab.com/3d-models/horse-free-download-9b77bb7542354b10bb7b4c6a25866724) by pgonarg (https://sketchfab.com/pgonarg) licensed under CC-BY-4.0
+- This work includes "3d dog cute" (https://sketchfab.com/3d-models/3d-dog-cute-206d1a40d4654d1e940c9ec05b2cc14f) by Tech developers (https://sketchfab.com/Deepu.Dra) licensed under CC-BY-4.0
+
+**Objects & Vehicles:**
+- This work includes "T-62A Main Battle Tank" (https://sketchfab.com/3d-models/t-62a-main-battle-tank-c61279bad4ca4502bcc8e584b558d10e) by Muhamad Mirza Arrafi (https://sketchfab.com/nazidefenseforceofficial) licensed under CC-BY-4.0
+- This work includes "Honda CB175 motorcycle - Downloadable 3D scan" (https://sketchfab.com/3d-models/honda-cb175-motorcycle-downloadable-3d-scan-e69c3bd3a52c40c09e5e3048f1ddcf2f) by David Antalek (https://sketchfab.com/David.Antalek) licensed under CC-BY-4.0
+
+**Human Anatomy:**
+- This work includes "Skull downloadable" (https://sketchfab.com/3d-models/skull-downloadable-1a9db900738d44298b0bc59f68123393) by martinjario (https://sketchfab.com/martinjario) licensed under CC-BY-4.0
+- This work includes "SKELETON (Esqueleto) - Downloadable" (https://sketchfab.com/3d-models/skeleton-esqueleto-downloadable-aa57a9054ea54fb8bbee9c59812a4dd7) by Daniel Geraldini (https://sketchfab.com/danielgeraldini) licensed under CC-BY-4.0
+
+*View individual license files in each model's public folder for complete attribution details.*
 
 ## 🔧 Configuration
 

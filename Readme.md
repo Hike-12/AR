@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![AUGMINT Logo](public/logo.png)
+![AUGMINT Logo](ar-model-viewer/public/logo.png)
 
 **A cutting-edge Augmented Reality web application for interactive 3D model visualization**
 

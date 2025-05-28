@@ -21,8 +21,8 @@ const models = [
   { name: 'Tank', path: '/tank/scene.gltf' },
   { name: 'Skull', path: '/skull/scene.gltf' },
   { name: 'Skeleton', path: '/skeleton/scene.gltf' },
-  { name: 'Dog', path: '/dog/scene.gltf' },
-  { name: 'Bike', path: '/bike/scene.gltf' },
+  // { name: 'Dog', path: '/dog/scene.gltf' },
+  // { name: 'Bike', path: '/bike/scene.gltf' },
 ];
 
 export default function AUGMINT() {
@@ -175,11 +175,17 @@ export default function AUGMINT() {
       controls.minPolarAngle = Math.PI * 0.2; // Don't go too far above
       
       // Limit panning to keep model centered
-      controls.screenSpacePanning = true;
+      // controls.screenSpacePanning = true;
 
       controls.touches = {
         ONE: THREE.TOUCH.ROTATE,
         TWO: THREE.TOUCH.DOLLY_PAN
+      };
+
+      controls.mouseButtons = {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN // Right mouse button for panning
       };
       
       // Disabled by default - will be enabled by button

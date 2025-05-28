@@ -136,11 +136,18 @@ export default function AUGMINT() {
       rendererLocal = new THREE.WebGLRenderer({ 
         alpha: true, 
         antialias: true,
-        preserveDrawingBuffer: true 
+        preserveDrawingBuffer: true,
+        powerPreference: "high-performance", // Add this
+        failIfMajorPerformanceCaveat: false  // Add this
       });
       rendererLocal.setSize(window.innerWidth, window.innerHeight);
-      rendererLocal.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
+      rendererLocal.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       rendererLocal.setClearColor(0x000000, 0);
+
+      // Add these lines to prevent texture warnings
+      rendererLocal.outputColorSpace = THREE.SRGBColorSpace; // Add this
+      rendererLocal.toneMapping = THREE.ACESFilmicToneMapping; // Add this
+      rendererLocal.toneMappingExposure = 1; // Add this
 
       // Clear and set up canvas
       if (canvasRef.current) {
@@ -231,51 +238,64 @@ export default function AUGMINT() {
     };
 
     const loadModel = (path) => {
-      loader.load(
-        path,
-        (gltf) => {
-          modelGroup.clear();
-          
-          // Auto-center and scale the model
-          const box = new THREE.Box3().setFromObject(gltf.scene);
-          const center = box.getCenter(new THREE.Vector3());
-          const size = box.getSize(new THREE.Vector3());
-          
-          // Center model properly
-          gltf.scene.position.x -= center.x;
-          gltf.scene.position.y -= center.y;
-          gltf.scene.position.z -= center.z;
-          
-          // Scale model to reasonable size with responsive adjustments
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const baseScale = 1 / maxDim;
-          const scaleFactor = screenSize.isMobile ? 0.85 : 1; // Slightly smaller on mobile
-          const scale = baseScale * scaleFactor;
-          
-          gltf.scene.scale.set(scale, scale, scale);
-          
-          modelGroup.add(gltf.scene);
-          scene.add(modelGroup);
-          
-          // Reset camera position to frame model nicely
-          camera.position.z = screenSize.isMobile ? 2.5 : 2;
-          
-          // Reset model controls when loading a new model
-          setModelControlsActive(false);
-          if (renderer) {
-            renderer.domElement.style.pointerEvents = 'none';
-          }
-          if (controlsRef.current) {
-            controlsRef.current.enabled = false;
-            controlsRef.current.reset();
-          }
-        },
-        undefined,
-        (error) => {
-          console.error('Error loading model:', error);
-        }
-      );
-    };
+  loader.load(
+    path,
+    (gltf) => {
+      modelGroup.clear();
+      
+      // Create a wrapper group for better control
+      const wrapper = new THREE.Group();
+      
+      // Auto-center and scale the model
+      const box = new THREE.Box3().setFromObject(gltf.scene);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      
+      // More aggressive centering - move to origin first
+      gltf.scene.position.set(-center.x, -center.y, -center.z);
+      
+      // Scale model to reasonable size with responsive adjustments
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const baseScale = maxDim > 0 ? 1.2 / maxDim : 1; // Increased from 1 to 1.2 for better visibility
+      const scaleFactor = screenSize.isMobile ? 0.85 : 1; // Slightly smaller on mobile
+      const scale = baseScale * scaleFactor;
+      
+      gltf.scene.scale.set(scale, scale, scale);
+      
+      // Add the scene to wrapper, then wrapper to modelGroup
+      wrapper.add(gltf.scene);
+      
+      // Force the wrapper to be at world origin
+      wrapper.position.set(0, 0, 0);
+      wrapper.rotation.set(0, 0, 0);
+      
+      modelGroup.add(wrapper);
+      scene.add(modelGroup);
+      
+      // Force modelGroup to center of world
+      modelGroup.position.set(0, 0, 0);
+      
+      // Reset camera position to frame model nicely
+      camera.position.set(0, 0, screenSize.isMobile ? 2.5 : 2);
+      camera.lookAt(0, 0, 0);
+      
+      // Reset model controls when loading a new model
+      setModelControlsActive(false);
+      if (renderer) {
+        renderer.domElement.style.pointerEvents = 'none';
+      }
+      if (controlsRef.current) {
+        controlsRef.current.enabled = false;
+        controlsRef.current.reset();
+        controlsRef.current.target.set(0, 0, 0); // Force controls to look at center
+      }
+    },
+    undefined,
+    (error) => {
+      console.error('Error loading model:', error);
+    }
+  );
+};
 
     init();
 

@@ -11,7 +11,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6.3.5-646CFF?style=for-the-badge&logo=vite)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.1.7-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 
-[🚀 Live Demo](https://augmint.vercel.app) • [📖 Documentation](#documentation) • [🐛 Report Bug](https://github.com/Hike-12/augmint/issues)
+[🚀 Live Demo](https://augmint.vercel.app) • [🐛 Report Bug](https://github.com/Hike-12/augmint/issues)
 
 </div>
 

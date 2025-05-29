@@ -1,4 +1,4 @@
-# 🦾 AUGMINT - AR Model Viewer
+# 🦾 AUGMINT - AR Model Viewer 
 
 <div align="center">
 
